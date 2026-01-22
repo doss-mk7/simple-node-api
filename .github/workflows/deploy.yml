@@ -13,10 +13,14 @@ jobs:
       AWS_REGION: eu-north-1
       INSTANCE_ID: i-024c086ae4ae92d4c
       REPO_DIR: C:\websites\simple-node-api
+      RETRIES: 3
+      WAIT_SEC: 15
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository with Retry
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
 
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
@@ -27,15 +31,17 @@ jobs:
 
       - name: Deploy via SSM
         run: |
-          aws ssm send-command \
-            --instance-ids ${{ env.INSTANCE_ID }} \
-            --document-name "AWS-RunPowerShellScript" \
-            --comment "GitHub Actions CI/CD deploy" \
-            --parameters commands='[
-              "Set-Location -Path ${{ env.REPO_DIR }}; \
-              git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git; \
-              git fetch origin main; \
-              git reset --hard origin/main; \
-              git clean -fd"
-            ]' \
-            --region ${{ env.AWS_REGION }}
+          for i in $(seq 1 ${{ env.RETRIES }}); do
+            aws ssm send-command \
+              --instance-ids ${{ env.INSTANCE_ID }} \
+              --document-name "AWS-RunPowerShellScript" \
+              --comment "GitHub Actions CI/CD deploy" \
+              --parameters commands='[
+                "Set-Location -Path ${{ env.REPO_DIR }}; \
+                git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git; \
+                git fetch origin main; \
+                git reset --hard origin/main; \
+                git clean -fd"
+              ]' \
+              --region ${{ env.AWS_REGION }} && break || echo "Retry $i/$RETRIES in ${{ env.WAIT_SEC }}s..." && sleep ${{ env.WAIT_SEC }}
+          done

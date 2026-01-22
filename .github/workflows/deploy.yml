@@ -1,4 +1,4 @@
-name: Secure CI/CD via AWS SSM (Windows EC2)
+name: CI/CD Deploy
 
 on:
   push:
@@ -7,21 +7,30 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to Windows EC2 via SSM
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: eu-north-1
+      INSTANCE_ID: i-024c086ae4ae92d4c
 
     steps:
-      - name: Deploy using AWS SSM
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy via SSM
         run: |
           aws ssm send-command \
-            --instance-ids i-024c086ae4ae92d4c \
+            --instance-ids ${{ env.INSTANCE_ID }} \
             --document-name "AWS-RunPowerShellScript" \
             --comment "GitHub Actions CI/CD deploy" \
             --parameters commands='[
-              "cd C:\\websites\\simple-node-api",
-              "git reset --hard",
-              "git pull origin main"
-            ]'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+              "Set-Location -Path C:\\websites\\simple-node-api; git reset --hard; git pull https://<GITHUB_TOKEN>@github.com/doss-mk7/simple-node-api.git main"
+            ]' \
+            --region ${{ env.AWS_REGION }}

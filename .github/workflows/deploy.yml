@@ -1,34 +1,30 @@
-name: Deploy to Windows EC2
+name: Check Node Version on Windows EC2
 
 on:
   push:
     branches:
-      - main  # Trigger on every push to main branch
+      - main
 
 jobs:
-  deploy:
+  check-node:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: AWS SSM Command
+      - name: AWS SSM Command - Node Version
         uses: Castlenine/aws-ssm-command@v1
         id: ssm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
           instance-ids: ${{ secrets.AWS_INSTANCE_ID }}
-          working-directory: 'C:\websites\simple-node-api'
-          command: 'git pull origin main'
-          comment: 'Deploy main branch on Windows EC2'
+          working-directory: 'C:\'   # any directory
+          command: 'node --version'
+          user: 'SYSTEM'
+          home-env: 'C:\Windows\system32'
+          comment: 'Check Node.js version on Windows EC2'
 
-      - name: Capture SSM command outputs
+      - name: Show Node Version Output
         run: |
-          echo "Requested at ${{ steps.ssm.outputs.request-date-time }} for ${{ steps.ssm.outputs.request-id }}"
-          echo "Status: ${{ steps.ssm.outputs.command-status-details }}"
-          echo "Output: ${{ steps.ssm.outputs.command-output }}"
+          echo "Node version from EC2:"
+          echo "${{ steps.ssm.outputs.command-output }}"

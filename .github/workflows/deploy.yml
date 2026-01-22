@@ -3,7 +3,7 @@ name: CI/CD Deploy
 on:
   push:
     branches:
-      - main
+      - main  # Trigger deploy on main branch
 
 jobs:
   deploy:
@@ -12,6 +12,7 @@ jobs:
     env:
       AWS_REGION: eu-north-1
       INSTANCE_ID: i-024c086ae4ae92d4c
+      REPO_DIR: C:\websites\simple-node-api
 
     steps:
       - name: Checkout Repository
@@ -31,6 +32,8 @@ jobs:
             --document-name "AWS-RunPowerShellScript" \
             --comment "GitHub Actions CI/CD deploy" \
             --parameters commands='[
-              "Set-Location -Path C:\\websites\\simple-node-api; git reset --hard; git pull https://<GITHUB_TOKEN>@github.com/doss-mk7/simple-node-api.git main"
+              "Set-Location -Path ${{ env.REPO_DIR }}; \
+              git reset --hard; \
+              git pull https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git main"
             ]' \
             --region ${{ env.AWS_REGION }}

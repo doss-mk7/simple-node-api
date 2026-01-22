@@ -3,7 +3,7 @@ name: CI/CD Deploy
 on:
   push:
     branches:
-      - main  # Trigger deploy on main branch
+      - main
 
 jobs:
   deploy:
@@ -33,7 +33,9 @@ jobs:
             --comment "GitHub Actions CI/CD deploy" \
             --parameters commands='[
               "Set-Location -Path ${{ env.REPO_DIR }}; \
-              git reset --hard; \
-              git pull https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git main"
+              git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git; \
+              git fetch origin main; \
+              git reset --hard origin/main; \
+              git clean -fd"
             ]' \
             --region ${{ env.AWS_REGION }}

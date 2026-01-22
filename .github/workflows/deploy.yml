@@ -3,7 +3,7 @@ name: Deploy to EC2 on Push
 on:
   push:
     branches:
-      - main  # Trigger on every push to main
+      - main
 
 jobs:
   deploy:
@@ -15,23 +15,31 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1  # Replace with your region
+          aws-region: eu-north-1
 
       - name: Execute commands via SSM
         id: execute_command
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
-            --document-name "AWS-RunShellScript" \
+            --document-name "AWS-RunPowerShellScript" \
             --parameters 'commands=["
-              runuser -l ubuntu git pull origin main",
-              "sudo systemctl restart gunicorn.service && echo Gunicorn restarted successfully || echo Gunicorn failed to restart"]' \
-            --comment "Deploying latest main branch" \
+              Set-Location -Path C:\websites\simple-node-api;
+              git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git;
+              git fetch origin main --verbose;
+              git reset --hard origin/main --verbose;
+              git clean -fd --verbose;
+              git log -5 --oneline;
+              # Optional: restart Node app
+              # Stop-Process -Name node -Force
+              # Start-Process -FilePath npm -ArgumentList ''run start'' -WorkingDirectory C:\websites\simple-node-api
+            "]' \
+            --comment "Deploy latest main branch" \
             --query "Command.CommandId" \
             --output text)
 
           echo "Command ID: $COMMAND_ID"
-          echo "::set-output name=command_id::$COMMAND_ID"    
+          echo "::set-output name=command_id::$COMMAND_ID"
 
       - name: Output execution via SSM
         run: |

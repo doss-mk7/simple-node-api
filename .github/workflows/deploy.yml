@@ -1,46 +1,34 @@
-name: Deploy to using github actions
+name: Deploy to Windows EC2
 
 on:
   push:
     branches:
-      - main  # Trigger on every push to main
+      - main  # Trigger on every push to main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: AWS SSM Command
+        uses: Castlenine/aws-ssm-command@v1
+        id: ssm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1  
+          aws-region: ${{ secrets.AWS_REGION }}
+          instance-ids: ${{ secrets.AWS_INSTANCE_ID }}
+          working-directory: 'C:\websites\simple-node-api'
+          command: 'git pull origin main'
+          comment: 'Deploy main branch on Windows EC2'
 
-      - name: Execute commands via SSM
-        id: execute_command
+      - name: Capture SSM command outputs
         run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
-            --document-name "AWS-RunPowerShellScript" \
-            --parameters 'commands=["
-              cd C:\websites\simple-node-api;
-              git pull origin main
-            "]' \
-            --comment "Deploying to main branch on Windows EC2" \
-            --query "Command.CommandId" \
-            --output text)
-
-          echo "Command ID: $COMMAND_ID"
-          echo "::set-output name=command_id::$COMMAND_ID"    
-
-      - name: Output execution via SSM
-        run: |
-          sleep 15
-          COMMAND_ID=${{ steps.execute_command.outputs.command_id }}
-          aws ssm list-command-invocations \
-            --details \
-            --instance-id ${{ secrets.AWS_INSTANCE_ID }} \
-            --query "CommandInvocations[].CommandPlugins[].{Status:Status,Output:Output}" \
-            --command-id "$COMMAND_ID" \
-            --output text
+          echo "Requested at ${{ steps.ssm.outputs.request-date-time }} for ${{ steps.ssm.outputs.request-id }}"
+          echo "Status: ${{ steps.ssm.outputs.command-status-details }}"
+          echo "Output: ${{ steps.ssm.outputs.command-output }}"

@@ -10,21 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: AWS SSM Command - Node Version
-        uses: Castlenine/aws-ssm-command@v1
-        id: ssm
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-          instance-ids: ${{ secrets.AWS_INSTANCE_ID }}
-          working-directory: 'C:\'   # any directory
-          command: 'node --version'
-          user: 'SYSTEM'
-          home-env: 'C:\Windows\system32'
-          comment: 'Check Node.js version on Windows EC2'
 
-      - name: Show Node Version Output
+      - name: Run Node Version on Windows EC2
+        id: ssm
         run: |
-          echo "Node version from EC2:"
-          echo "${{ steps.ssm.outputs.command-output }}"
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Check Node Version" \
+            --parameters 'commands=["node --version"]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+
+          # Wait a few seconds for SSM to execute
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text

@@ -17,13 +17,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Run Echo Hello on Windows EC2
+      - name: Get Windows EC2 System Name
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
             --document-name "AWS-RunPowerShellScript" \
-            --comment "Echo Hello" \
-            --parameters 'commands=["echo hello"]' \
+            --comment "Get System Name" \
+            --parameters 'commands=["echo $env:COMPUTERNAME"]' \
             --query "Command.CommandId" \
             --output text)
 

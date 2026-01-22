@@ -1,9 +1,9 @@
-name: Deploy to EC2 on Push
+name: Deploy to using github actions
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on every push to main
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
+          aws-region: ap-south-1  
 
       - name: Execute commands via SSM
         id: execute_command
@@ -24,22 +24,15 @@ jobs:
             --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
             --document-name "AWS-RunPowerShellScript" \
             --parameters 'commands=["
-              Set-Location -Path C:\websites\simple-node-api;
-              git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git;
-              git fetch origin main --verbose;
-              git reset --hard origin/main --verbose;
-              git clean -fd --verbose;
-              git log -5 --oneline;
-              # Optional: restart Node app
-              # Stop-Process -Name node -Force
-              # Start-Process -FilePath npm -ArgumentList ''run start'' -WorkingDirectory C:\websites\simple-node-api
+              cd C:\websites\simple-node-api;
+              git pull origin main
             "]' \
-            --comment "Deploy latest main branch" \
+            --comment "Deploying to main branch on Windows EC2" \
             --query "Command.CommandId" \
             --output text)
 
           echo "Command ID: $COMMAND_ID"
-          echo "::set-output name=command_id::$COMMAND_ID"
+          echo "::set-output name=command_id::$COMMAND_ID"    
 
       - name: Output execution via SSM
         run: |

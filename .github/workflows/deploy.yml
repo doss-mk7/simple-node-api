@@ -1,23 +1,19 @@
-name: Deploy to EC2 Windows
+name: Deploy ColdBox on EC2
 
 on:
   push:
-    branches: [ main ]  # or your branch
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          cd C:\websites\simple-node-api.git
-          git pull origin main
-          # Optional: Restart Node app (adjust command)
-          # net stop YourNodeService && net start YourNodeService
-          # Or if PM2: pm2 restart ecosystem.config.js
-          # Or taskkill /f /im node.exe && cd . && npm start
+      - name: Trigger deploy on EC2
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            powershell -File C:\deploy\deploy.ps1

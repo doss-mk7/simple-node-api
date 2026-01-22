@@ -18,19 +18,17 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Run Node Version on Windows EC2
-        id: ssm
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
             --document-name "AWS-RunPowerShellScript" \
             --comment "Check Node Version" \
-            --parameters 'commands=["node --version"]' \
+            --parameters 'commands=["& ''C:\\Program Files\\nodejs\\node.exe'' --version"]' \
             --query "Command.CommandId" \
             --output text)
 
           echo "Command ID: $COMMAND_ID"
 
-          # Wait a few seconds for SSM to execute
           sleep 10
 
           aws ssm list-command-invocations \

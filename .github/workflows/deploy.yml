@@ -13,11 +13,9 @@ jobs:
       AWS_REGION: eu-north-1
       INSTANCE_ID: i-024c086ae4ae92d4c
       REPO_DIR: C:\websites\simple-node-api
-      RETRIES: 3
-      WAIT_SEC: 15
 
     steps:
-      - name: Checkout Repository with Retry
+      - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
@@ -29,19 +27,43 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy via SSM
+      - name: Deploy via SSM with Git Logs
         run: |
-          for i in $(seq 1 ${{ env.RETRIES }}); do
-            aws ssm send-command \
-              --instance-ids ${{ env.INSTANCE_ID }} \
-              --document-name "AWS-RunPowerShellScript" \
-              --comment "GitHub Actions CI/CD deploy" \
-              --parameters commands='[
-                "Set-Location -Path ${{ env.REPO_DIR }}; \
-                git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git; \
-                git fetch origin main; \
-                git reset --hard origin/main; \
-                git clean -fd"
-              ]' \
-              --region ${{ env.AWS_REGION }} && break || echo "Retry $i/$RETRIES in ${{ env.WAIT_SEC }}s..." && sleep ${{ env.WAIT_SEC }}
-          done
+          aws ssm send-command \
+            --instance-ids ${{ env.INSTANCE_ID }} \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "GitHub Actions CI/CD deploy with Git logs" \
+            --parameters commands='[
+              "
+              $repoDir = ''${{ env.REPO_DIR }}''
+              Set-Location -Path $repoDir
+
+              # Ensure Git remote uses PAT
+              git remote set-url origin https://'"${{ secrets.REPO_KEY }}"'@github.com/doss-mk7/simple-node-api.git
+
+              # Log current branch and status
+              Write-Host ''Current branch:''
+              git branch
+              Write-Host ''Git status:''
+              git status
+
+              # Stash any changes to avoid conflicts
+              git stash push -m ''auto-stash before deploy'' | Out-Null
+
+              # Fetch, reset, clean and log all output
+              Write-Host ''Fetching origin/main...''
+              git fetch origin main --verbose
+              Write-Host ''Resetting to origin/main...''
+              git reset --hard origin/main --verbose
+              Write-Host ''Cleaning untracked files...''
+              git clean -fd --verbose
+
+              # Show last 5 commits
+              Write-Host ''Last 5 commits:''
+              git log -5 --oneline
+
+              # Drop stash if exists
+              git stash drop || Write-Host ''No stash to drop''
+              "
+            ]' \
+            --region ${{ env.AWS_REGION }}

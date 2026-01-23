@@ -76,3 +76,23 @@ jobs:
             --details \
             --query "CommandInvocations[].CommandPlugins[].Output" \
             --output text
+
+      # 🔹 STEP 4 — Pull Latest Code from Git
+      - name: Git Pull on Windows EC2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Pull latest code from Git" \
+            --parameters '{"commands":["& \"C:\\Program Files\\Git\\cmd\\git.exe\" pull"]}' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text

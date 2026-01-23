@@ -78,13 +78,18 @@ jobs:
             --output text
 
       # 🔹 STEP 4 — Pull Latest Code from Git (fixed)
+            # 🔹 STEP 4 — Pull Latest Code from Git (fix ownership)
       - name: Git Pull on Windows EC2
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
             --document-name "AWS-RunPowerShellScript" \
-            --comment "Pull latest code from Git" \
-            --parameters '{"commands":["cd C:\\websites\\simple-node-api","& \"C:\\Program Files\\Git\\cmd\\git.exe\" pull"]}' \
+            --comment "Pull latest code from Git (fix ownership)" \
+            --parameters '{"commands":[
+              "& \"C:\\Program Files\\Git\\cmd\\git.exe\" config --global --add safe.directory C:/websites/simple-node-api",
+              "cd C:\\websites\\simple-node-api",
+              "& \"C:\\Program Files\\Git\\cmd\\git.exe\" pull"
+            ]}' \
             --query "Command.CommandId" \
             --output text)
 
@@ -96,3 +101,4 @@ jobs:
             --details \
             --query "CommandInvocations[].CommandPlugins[].Output" \
             --output text
+

@@ -17,7 +17,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 🔹 EXISTING STEP 1 — UNCHANGED
+      # 🔹 STEP 1 — Get Windows EC2 System Name
       - name: Get Windows EC2 System Name
         run: |
           COMMAND_ID=$(aws ssm send-command \
@@ -29,7 +29,6 @@ jobs:
             --output text)
 
           echo "Command ID: $COMMAND_ID"
-
           sleep 10
 
           aws ssm list-command-invocations \
@@ -38,22 +37,18 @@ jobs:
             --query "CommandInvocations[].CommandPlugins[].Output" \
             --output text
 
-      # 🔹 EXISTING STEP 2 — UNCHANGED
+      # 🔹 STEP 2 — CD to Node App Directory and Print Path
       - name: CD to Node App Directory and Print Path
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
             --document-name "AWS-RunPowerShellScript" \
             --comment "Go to node app directory and check path" \
-            --parameters 'commands=[
-              "cd C:\\websites\\simple-node-api",
-              "pwd"
-            ]' \
+            --parameters '{"commands":["cd C:\\websites\\simple-node-api","pwd"]}' \
             --query "Command.CommandId" \
             --output text)
 
           echo "Command ID: $COMMAND_ID"
-
           sleep 10
 
           aws ssm list-command-invocations \
@@ -62,24 +57,19 @@ jobs:
             --query "CommandInvocations[].CommandPlugins[].Output" \
             --output text
 
-      # 🔹 NEW STEP 3 — ADDED (git --version + git pull)
-      - name: Git Pull Latest Code on Windows EC2
+      # 🔹 STEP 3 — Print git version ONLY (no cd)
+      - name: Print Git Version on Windows EC2
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
             --document-name "AWS-RunPowerShellScript" \
-            --comment "Git version check and pull latest code" \
-            --parameters 'commands=[
-              "cd C:\\websites\\simple-node-api",
-              "git --version",
-              "git pull"
-            ]' \
+            --comment "Print git version only" \
+            --parameters '{"commands":["git --version"]}' \
             --query "Command.CommandId" \
             --output text)
 
           echo "Command ID: $COMMAND_ID"
-
-          sleep 15
+          sleep 10
 
           aws ssm list-command-invocations \
             --command-id "$COMMAND_ID" \

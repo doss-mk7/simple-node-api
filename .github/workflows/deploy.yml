@@ -17,6 +17,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # 🔹 EXISTING COMMAND — UNCHANGED
       - name: Get Windows EC2 System Name
         run: |
           COMMAND_ID=$(aws ssm send-command \
@@ -24,6 +25,30 @@ jobs:
             --document-name "AWS-RunPowerShellScript" \
             --comment "Get System Name" \
             --parameters 'commands=["echo $env:COMPUTERNAME"]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text
+
+      # 🔹 NEW COMMAND — ADDED ONLY
+      - name: CD to Node App Directory and Print Path
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Go to node app directory and check path" \
+            --parameters 'commands=[
+              "cd C:\\websites\\simple-node-api",
+              "pwd"
+            ]' \
             --query "Command.CommandId" \
             --output text)
 

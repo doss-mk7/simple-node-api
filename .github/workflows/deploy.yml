@@ -57,14 +57,14 @@ jobs:
             --query "CommandInvocations[].CommandPlugins[].Output" \
             --output text
 
-      # 🔹 STEP 3 — Print git version ONLY (no cd)
+      # 🔹 STEP 3 — Print Git Version ONLY (fixed for PowerShell + SSM)
       - name: Print Git Version on Windows EC2
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID }}" \
             --document-name "AWS-RunPowerShellScript" \
             --comment "Print git version only" \
-            --parameters '{"commands":["git --version"]}' \
+            --parameters '{"commands":["& \"C:\\Program Files\\Git\\cmd\\git.exe\" --version"]}' \
             --query "Command.CommandId" \
             --output text)
 

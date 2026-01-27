@@ -3,7 +3,7 @@ name: Check Node Version on Windows EC2
 on:
   push:
     branches:
-      - main
+      - main1
 
 jobs:
   check-node:

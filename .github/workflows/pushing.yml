@@ -1,0 +1,103 @@
+name: Check Node Version on Windows EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 🔹 STEP 1 — Get Windows EC2 System Name
+      - name: Get Windows EC2 System Name
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID_NEW }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Get System Name" \
+            --parameters 'commands=["echo $env:COMPUTERNAME"]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text
+
+      # 🔹 STEP 2 — CD to Node App Directory and Print Path
+      - name: CD to Node App Directory and Print Path
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID_NEW }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Go to node app directory and check path" \
+            --parameters '{"commands":["cd C:\\websites\\simple-node-api","pwd"]}' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text
+
+      # 🔹 STEP 3 — Print Git Version ONLY (fixed for PowerShell + SSM)
+      - name: Print Git Version on Windows EC2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID_NEW }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Print git version only" \
+            --parameters '{"commands":["& \"C:\\Program Files\\Git\\cmd\\git.exe\" --version"]}' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text
+
+      # 🔹 STEP 4 — Pull Latest Code from Git (fixed)
+            # 🔹 STEP 4 — Pull Latest Code from Git (fix ownership)
+      - name: Git Pull on Windows EC2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.AWS_INSTANCE_ID_NEW }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --comment "Pull latest code from Git (fix ownership)" \
+            --parameters '{"commands":[
+              "& \"C:\\Program Files\\Git\\cmd\\git.exe\" config --global --add safe.directory C:/websites/simple-node-api",
+              "cd C:\\websites\\simple-node-api",
+              "& \"C:\\Program Files\\Git\\cmd\\git.exe\" pull"
+            ]}' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          sleep 10
+
+          aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[].CommandPlugins[].Output" \
+            --output text

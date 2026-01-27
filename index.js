@@ -25,7 +25,7 @@ const swaggerOptions = {
     info: {
       title: 'Developers API',
       version: '1.0.0',
-      description: 'A Simple API'
+      description: 'A Simple API 2'
     },
     components: {
       securitySchemes: {
